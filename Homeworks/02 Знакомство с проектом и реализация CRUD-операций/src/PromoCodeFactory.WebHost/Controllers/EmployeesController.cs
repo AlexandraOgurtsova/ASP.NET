@@ -65,9 +65,9 @@ public class EmployeesController(
 
             return CreatedAtAction(nameof(this.GetById), new { id = employeeModel.Id }, employeeModel);
         }
-        catch (Exception ex)
+        catch (InvalidOperationException ex)
         {
-            return BadRequest(new ProblemDetails { Detail = ex.Message });
+            return BadRequest(ex.Message);
         }
     }
 
@@ -101,9 +101,9 @@ public class EmployeesController(
         {
             return NotFound("Employee not found");
         }
-        catch (Exception ex)
+        catch (InvalidOperationException ex)
         {
-            return BadRequest(new ProblemDetails { Detail = ex.Message });
+            return BadRequest(ex.Message);
         }
     }
 
