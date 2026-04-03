@@ -1,0 +1,20 @@
+services:
+  promocode-factory-api:
+    build:
+      context: ./src
+      dockerfile: Dockerfile
+    image: promocode-factory-api-image
+    container_name: promocode-factory-api
+    ports:
+      - "8091:5000"
+    volumes:
+      - db:/app/db
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ConnectionStrings__PromocodeFactoryDb=Filename=/app/db/PromoCodeFactory.sqlite
+      - ASPNETCORE_URLS=http://+:5000
+    restart: unless-stopped
+
+volumes:
+  db:
+    name: promocode-factory-db
