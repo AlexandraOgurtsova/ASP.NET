@@ -5,14 +5,11 @@ COPY ["PromoCodeFactory.Core/PromoCodeFactory.Core.csproj", "PromoCodeFactory.Co
 COPY ["PromoCodeFactory.DataAccess/PromoCodeFactory.DataAccess.csproj", "PromoCodeFactory.DataAccess/"]
 COPY ["PromoCodeFactory.WebHost/PromoCodeFactory.WebHost.csproj", "PromoCodeFactory.WebHost/"]
 COPY ["PromoCodeFactory.UnitTests/PromoCodeFactory.UnitTests.csproj", "PromoCodeFactory.UnitTests/"]
+RUN dotnet restore 
 
-RUN dotnet restore "PromoCodeFactory.WebHost/PromoCodeFactory.WebHost.csproj"
-
-COPY . .
-
-WORKDIR "/src/PromoCodeFactory.WebHost"
-RUN dotnet publish "PromoCodeFactory.WebHost.csproj" -c Release -o --no-restore
-RUN dotnet publish "PromoCodeFactory.WebHost.csproj" -c Release -o /app/publish --no-restore --no-build
+COPY src/ .
+RUN dotnet build -c Release -o --no-restore
+RUN dotnet publish -c Release -o /app/publish --no-restore --no-build
 
 FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS final
 WORKDIR /app
