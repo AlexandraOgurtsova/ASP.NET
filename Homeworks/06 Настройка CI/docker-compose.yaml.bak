@@ -4,12 +4,14 @@ services:
     container_name: promocode-factory-api
     restart: always
     ports:
-      - "8091:8080"
+      - "8091:5000"
     volumes:
       - db:/app/db
     environment:
-      - "ConnectionStrings:PromocodeFactoryDb=Filename=/app/db/PromoCodeFactoryDb.sqlite"
-      - "ASPNETCORE_ENVIRONMENT=Production"
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ConnectionStrings__PromocodeFactoryDb=Filename=/app/db/PromoCodeFactory.sqlite
+      - ASPNETCORE_URLS=http://+:5000
+    restart: unless-stopped
 
 volumes:
   db:
