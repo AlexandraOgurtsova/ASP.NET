@@ -1,0 +1,58 @@
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'Homeworks/06 Настройка CI/**'
+  workflow_dispatch:
+
+env:
+  REGISTRY: ghcr.io
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Clone repository
+        uses: actions/checkout@v4
+
+      - name: Build and run tests
+        run: |
+          docker build \
+            --file "Homeworks/06 Настройка CI/src/Dockerfile" \
+            --target test \
+            --tag promocode-factory-api-test-image \
+            "Homeworks/06 Настройка CI/src"
+
+  build-and-push:
+    needs: test
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Clone repository
+        uses: actions/checkout@v4
+
+      - name: Convert repository name to lowercase
+        run: |
+          LOWERCASE_REPO=$(echo "${{ github.repository }}" | tr '[:upper:]' '[:lower:]')
+          echo "IMAGE_NAME=$LOWERCASE_REPO" >> $GITHUB_ENV
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          password: ${{ secrets.GITHUB_TOKEN }}
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}       
+
+      - name: Build and push 
+        uses: docker/build-push-action@v5
+        with:
+          context: "Homeworks/06 Настройка CI/src"
+          file: "Homeworks/06 Настройка CI/src/Dockerfile"
+          push: true
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
