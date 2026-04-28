@@ -16,13 +16,9 @@ function App() {
     
     try {
       const response = await axios.get('https://catfact.ninja/fact');   
-
-      if (response.status >= 200 && response.status < 300) {       
-        const fact = response.data.fact || 'Факт не найден';
-        setCatFact(fact);
-      } else {
-        setError(`Неожиданный статус ответа: ${response.status}`);
-      }
+      const fact = response.data.fact || 'Факт не найден';
+      setCatFact(fact);
+      setError('');
     } catch (err) {
       if (err.response) {
         setError(`Ошибка сервера: ${err.response.status} - ${err.response.statusText}`);
