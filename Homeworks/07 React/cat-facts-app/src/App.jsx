@@ -15,11 +15,10 @@ function App() {
     setError('');
     
     try {
-      const response = await axios.get('https://catfact.ninja/facts');   
+      const response = await axios.get('https://catfact.ninja/fact');   
 
-      if (response.status >= 200 && response.status < 300) {
-        const randomNumber = Math.floor(Math.random() * 9) + 0;
-        const fact = response.data.data[randomNumber]?.fact || 'Факт не найден';
+      if (response.status >= 200 && response.status < 300) {       
+        const fact = response.data.fact || 'Факт не найден';
         setCatFact(fact);
       } else {
         setError(`Неожиданный статус ответа: ${response.status}`);
