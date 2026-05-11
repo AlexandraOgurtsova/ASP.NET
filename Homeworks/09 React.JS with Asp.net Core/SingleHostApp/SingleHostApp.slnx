@@ -1,0 +1,7 @@
+<Solution>
+  <Project Path="singlehostapp.client/singlehostapp.client.esproj">
+    <Build />
+    <Deploy />
+  </Project>
+  <Project Path="SingleHostApp.Server/SingleHostApp.Server.csproj" />
+</Solution>
