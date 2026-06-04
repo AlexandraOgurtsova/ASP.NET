@@ -38,19 +38,12 @@ namespace Pcf.GivingToCustomer.IntegrationTests.Data
                         Email = "ivan_sergeev@mail.ru",
                         FirstName = "Иван",
                         LastName = "Петров",
-                        Preferences = new List<CustomerPreference>()
+                        PreferenceIds = new List<Guid>()
                         {
-                            new CustomerPreference()
-                            {
-                                CustomerId = customerId,
-                                PreferenceId = Guid.Parse("76324c47-68d2-472d-abb8-33cfa8cc0c84")
-                            },
-                            new CustomerPreference()
-                            {
-                                CustomerId = customerId,
-                                PreferenceId = Guid.Parse("ef7f299f-92d7-459f-896e-078ed53ef99c")
-                            }
-                        }
+                            Guid.Parse("76324c47-68d2-472d-abb8-33cfa8cc0c84"),
+                            Guid.Parse("ef7f299f-92d7-459f-896e-078ed53ef99c")
+                        },
+                        PromoCodeIds = new List<Guid>()
                     }
                 };
 
