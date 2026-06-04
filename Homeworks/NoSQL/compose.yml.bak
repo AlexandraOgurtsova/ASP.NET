@@ -43,19 +43,21 @@ services:
     depends_on: 
       - promocode-factory-receiving-from-partner-db
   
-     #GivingToCustomer Mongo Db (с аутентификацией)
+    #GivingToCustomer Mongo Db
   promocode-factory-giving-to-customer-mongo:
     image: "mongo:4.2.3"
     container_name: 'promocode-factory-giving-to-customer-mongo'
     restart: always
     ports:
       - 27017:27017
-    environment:
-      - MONGO_INITDB_ROOT_USERNAME=admin
-      - MONGO_INITDB_ROOT_PASSWORD=docker
-      - MONGO_INITDB_DATABASE=promocode_factory_giving_to_customer_db
+    # Временно отключаем аутентификацию для тестов
+    # environment:
+    #   - MONGO_INITDB_ROOT_USERNAME=admin
+    #   - MONGO_INITDB_ROOT_PASSWORD=docker
+    #   - MONGO_INITDB_DATABASE=promocode_factory_giving_to_customer_db
+    command: mongod --bind_ip_all --noauth
   
-  #GivingToCustomer Api (с аутентификацией)
+  #GivingToCustomer Api
   promocode-factory-giving-to-customer-api:
     build: src/Pcf.GivingToCustomer/
     container_name: 'promocode-factory-giving-to-customer-api'

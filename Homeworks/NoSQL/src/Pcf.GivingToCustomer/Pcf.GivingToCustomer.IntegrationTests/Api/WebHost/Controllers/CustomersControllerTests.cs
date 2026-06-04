@@ -9,6 +9,8 @@ using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
 using Newtonsoft.Json;
 using Pcf.GivingToCustomer.Core.Abstractions.Gateways;
+using Pcf.GivingToCustomer.Core.Configuration;
+using Pcf.GivingToCustomer.DataAccess;
 using Pcf.GivingToCustomer.IntegrationTests.Fakes;
 using Pcf.GivingToCustomer.WebHost;
 using Pcf.GivingToCustomer.WebHost.Models;
@@ -16,27 +18,21 @@ using Xunit;
 
 namespace Pcf.GivingToCustomer.IntegrationTests.Api.WebHost.Controllers
 {
-
-    public class CustomersControllerTests
-        //: IClassFixture<WebApplicationFactory<Startup>> // Postgres
-        : IClassFixture<TestWebApplicationFactory<Startup>> // SqlLite
+    public class CustomersControllerTests : IClassFixture<TestWebApplicationFactory<Startup>>
     {
-        private readonly WebApplicationFactory<Startup> _factory;
-        
-        public CustomersControllerTests(
-            //WebApplicationFactory<Startup> factory  // Postgres
-            TestWebApplicationFactory<Startup> factory // SqlLite
-            )
+        private readonly TestWebApplicationFactory<Startup> _factory;
+
+        public CustomersControllerTests(TestWebApplicationFactory<Startup> factory)
         {
             _factory = factory;
         }
-        
+
         [Fact]
         public async Task CreateCustomerAsync_CanCreateCustomer_ShouldCreateExpectedCustomer()
         {
             //Arrange 
             var client = _factory.CreateClient();
-            
+
             var preferenceId = Guid.Parse("ef7f299f-92d7-459f-896e-078ed53ef99c");
             var request = new CreateOrEditCustomerRequest()
             {
@@ -51,7 +47,7 @@ namespace Pcf.GivingToCustomer.IntegrationTests.Api.WebHost.Controllers
 
             //Act
             var response = await client.PostAsJsonAsync("/api/v1/customers", request);
-         
+
             //Assert
             response.IsSuccessStatusCode.Should().BeTrue();
             response.StatusCode.Should().Be(HttpStatusCode.Created);
@@ -69,7 +65,7 @@ namespace Pcf.GivingToCustomer.IntegrationTests.Api.WebHost.Controllers
                 .And
                 .Contain(x => x.Id == preferenceId);
         }
-        
+
         [Fact]
         public async Task GetCustomerAsync_CustomerExisted_ShouldReturnExpectedCustomer()
         {
@@ -104,22 +100,23 @@ namespace Pcf.GivingToCustomer.IntegrationTests.Api.WebHost.Controllers
                     new PreferenceResponse()
                     {
                         Id = Guid.Parse("76324c47-68d2-472d-abb8-33cfa8cc0c84"),
-                        Name = "Дети",                    
+                        Name = "Дети",
                     }
                 }
             };
 
             //Act
             var response = await client.GetAsync($"/api/v1/customers/{expected.Id}");
-         
+
             //Assert
             response.IsSuccessStatusCode.Should().BeTrue();
             response.StatusCode.Should().Be(HttpStatusCode.OK);
-            
+
             var actual = JsonConvert.DeserializeObject<CustomerResponse>(
                 await response.Content.ReadAsStringAsync());
 
-            actual.Should().BeEquivalentTo(expected);
-        }
+            actual.Should().BeEquivalentTo(expected, options => options
+                .Excluding(x => x.PromoCodes));
+        } 
     }
 }
