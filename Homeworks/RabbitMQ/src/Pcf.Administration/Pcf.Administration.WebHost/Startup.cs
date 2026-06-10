@@ -10,6 +10,9 @@ using Pcf.Administration.DataAccess.Repositories;
 using Pcf.Administration.DataAccess.Data;
 using Pcf.Administration.Core.Abstractions.Repositories;
 using System;
+using Pcf.Administration.Core.Services;
+using Pcf.Administration.WebHost.Consumers;
+using Pcf.Common.RabbitMQ;
 
 namespace Pcf.Administration.WebHost
 {
@@ -26,10 +29,15 @@ namespace Pcf.Administration.WebHost
         // For more information on how to configure your application, visit https://go.microsoft.com/fwlink/?LinkID=398940
         public void ConfigureServices(IServiceCollection services)
         {
+            var rabbitMQSettings = Configuration.GetSection("RabbitMQ").Get<RabbitMQSettings>();
+            services.AddSingleton(rabbitMQSettings);
+            services.AddSingleton<IRabbitMQService, RabbitMQService>();
+
             services.AddControllers().AddMvcOptions(x =>
                 x.SuppressAsyncSuffixInActionNames = false);
             services.AddScoped(typeof(IRepository<>), typeof(EfRepository<>));
             services.AddScoped<IDbInitializer, EfDbInitializer>();
+            services.AddScoped<IEmployeePromoCodeService, EmployeePromoCodeService>();
             services.AddDbContext<DataContext>(x =>
             {
                 //x.UseSqlite("Filename=PromocodeFactoryAdministrationDb.sqlite");
@@ -45,6 +53,8 @@ namespace Pcf.Administration.WebHost
                 options.Title = "PromoCode Factory Administration API Doc";
                 options.Version = "1.0";
             });
+
+            services.AddHostedService<PromoCodeIssuedConsumer>();
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.

@@ -5,10 +5,11 @@ using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using Pcf.GivingToCustomer.IntegrationTests.Data;
+using Pcf.Common.RabbitMQ;
 using Pcf.GivingToCustomer.Core.Abstractions.Gateways;
 using Pcf.GivingToCustomer.DataAccess;
-using Pcf.GivingToCustomer.Integration;
+using Pcf.GivingToCustomer.IntegrationTests.Data;
+using Pcf.GivingToCustomer.IntegrationTests.Fakes;
 
 namespace Pcf.GivingToCustomer.IntegrationTests
 {
@@ -19,18 +20,28 @@ namespace Pcf.GivingToCustomer.IntegrationTests
         {
             builder.ConfigureServices(services =>
             {
-                var descriptor = services.SingleOrDefault(
-                    d => d.ServiceType ==
-                         typeof(DbContextOptions<DataContext>));
+                var dbContextDescriptor = services.SingleOrDefault(
+                    d => d.ServiceType == typeof(DbContextOptions<DataContext>));
+                if (dbContextDescriptor != null)
+                    services.Remove(dbContextDescriptor);
 
-                services.Remove(descriptor);
+                var rabbitMQDescriptor = services.SingleOrDefault(
+                    d => d.ServiceType == typeof(IRabbitMQService));
+                if (rabbitMQDescriptor != null)
+                    services.Remove(rabbitMQDescriptor);
 
-                services.AddScoped<INotificationGateway, NotificationGateway>();
+                var hostedServiceDescriptor = services.SingleOrDefault(
+                    d => d.ServiceType == typeof(Microsoft.Extensions.Hosting.IHostedService) &&
+                         d.ImplementationType == typeof(Pcf.GivingToCustomer.WebHost.Consumers.PromoCodeIssuedConsumer));
+                if (hostedServiceDescriptor != null)
+                    services.Remove(hostedServiceDescriptor);
+
+                services.AddScoped<INotificationGateway, FakeNotificationGateway>();
+                services.AddSingleton<IRabbitMQService, FakeRabbitMQService>(); 
 
                 services.AddDbContext<DataContext>(x =>
                 {
-                    x.UseSqlite("Filename=PromoCodeFactoryDb.sqlite");
-                    //x.UseNpgsql(Configuration.GetConnectionString("PromoCodeFactoryDb"));
+                    x.UseSqlite("Filename=TestPromoCodeFactoryDb.sqlite");
                     x.UseSnakeCaseNamingConvention();
                     x.UseLazyLoadingProxies();
                 });

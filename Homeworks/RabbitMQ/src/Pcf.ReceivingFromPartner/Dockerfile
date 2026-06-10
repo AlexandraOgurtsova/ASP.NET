@@ -3,10 +3,13 @@ FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
 WORKDIR /app
 
 # Copy the solution file and project files, then restore dependencies
-COPY *.sln .
-COPY */*.csproj ./
-RUN for file in $(ls *.csproj); do mkdir -p ${file%.*} && mv $file ${file%.*}; done
-RUN dotnet restore
+COPY Pcf.Common/*.csproj Pcf.Common/
+COPY Pcf.ReceivingFromPartner/Pcf.ReceivingFromPartner.Core/*.csproj Pcf.ReceivingFromPartner/Pcf.ReceivingFromPartner.Core/
+COPY Pcf.ReceivingFromPartner/Pcf.ReceivingFromPartner.DataAccess/*.csproj Pcf.ReceivingFromPartner/Pcf.ReceivingFromPartner.DataAccess/
+COPY Pcf.ReceivingFromPartner/Pcf.ReceivingFromPartner.Integration/*.csproj Pcf.ReceivingFromPartner/Pcf.ReceivingFromPartner.Integration/
+COPY Pcf.ReceivingFromPartner/Pcf.ReceivingFromPartner.WebHost/*.csproj Pcf.ReceivingFromPartner/Pcf.ReceivingFromPartner.WebHost/
+COPY Pcf.ReceivingFromPartner/Pcf.ReceivingFromPartner.UnitTests/*.csproj Pcf.ReceivingFromPartner/Pcf.ReceivingFromPartner.UnitTests/
+RUN dotnet restore Pcf.ReceivingFromPartner/Pcf.ReceivingFromPartner.WebHost/Pcf.ReceivingFromPartner.WebHost.csproj
 
 # Copy the remaining files and publish the application
 COPY . ./aspnetapp
