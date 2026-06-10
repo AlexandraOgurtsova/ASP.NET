@@ -8,6 +8,8 @@ using Pcf.ReceivingFromPartner.Core.Domain;
 using Pcf.ReceivingFromPartner.Core.Abstractions.Gateways;
 using Pcf.ReceivingFromPartner.WebHost.Models;
 using Pcf.ReceivingFromPartner.WebHost.Mappers;
+using Pcf.Common.RabbitMQ;
+using Pcf.Common.Events;
 
 namespace Pcf.ReceivingFromPartner.WebHost.Controllers
 {
@@ -24,18 +26,21 @@ namespace Pcf.ReceivingFromPartner.WebHost.Controllers
         private readonly INotificationGateway _notificationGateway;
         private readonly IGivingPromoCodeToCustomerGateway _givingPromoCodeToCustomerGateway;
         private readonly IAdministrationGateway _administrationGateway;
+        private readonly IRabbitMQService _rabbitMQService;
 
         public PartnersController(IRepository<Partner> partnersRepository,
             IRepository<Preference> preferencesRepository,
             INotificationGateway notificationGateway,
             IGivingPromoCodeToCustomerGateway givingPromoCodeToCustomerGateway,
-            IAdministrationGateway administrationGateway)
+            IAdministrationGateway administrationGateway,
+            IRabbitMQService rabbitMQService)
         {
             _partnersRepository = partnersRepository;
             _preferencesRepository = preferencesRepository;
             _notificationGateway = notificationGateway;
             _givingPromoCodeToCustomerGateway = givingPromoCodeToCustomerGateway;
             _administrationGateway = administrationGateway;
+            _rabbitMQService = rabbitMQService;
         }
 
         /// <summary>
@@ -291,59 +296,76 @@ namespace Pcf.ReceivingFromPartner.WebHost.Controllers
         public async Task<IActionResult> ReceivePromoCodeFromPartnerWithPreferenceAsync(Guid id,
             ReceivingPromoCodeRequest request)
         {
-            var partner = await _partnersRepository.GetByIdAsync(id);
-
-            if (partner == null)
+            try
             {
-                return BadRequest("Партнер не найден");
+                var partner = await _partnersRepository.GetByIdAsync(id);
+
+                if (partner == null)
+                {
+                    return BadRequest("Партнер не найден");
+                }
+
+                var activeLimit = partner.PartnerLimits.FirstOrDefault(x
+                    => !x.CancelDate.HasValue && x.EndDate > DateTime.Now);
+
+                if (activeLimit == null)
+                {
+                    return BadRequest("Нет доступного лимита на предоставление промокодов");
+                }
+
+                if (partner.NumberIssuedPromoCodes + 1 > activeLimit.Limit)
+                {
+                    return BadRequest("Лимит на выдачу промокодов превышен");
+                }
+
+                if (partner.PromoCodes.Any(x => x.Code == request.PromoCode))
+                {
+                    return BadRequest("Данный промокод уже был выдан ранее");
+                }
+
+                //Получаем предпочтение по имени
+                var preference = await _preferencesRepository.GetByIdAsync(request.PreferenceId);
+
+                if (preference == null)
+                {
+                    return BadRequest("Предпочтение не найдено");
+                }
+
+                PromoCode promoCode = PromoCodeMapper.MapFromModel(request, preference, partner);
+                partner.PromoCodes.Add(promoCode);
+                partner.NumberIssuedPromoCodes++;
+
+                await _partnersRepository.UpdateAsync(partner);
+
+                var promocodeEvent = new PromoCodeIssuedEvent
+                {
+                    PartnerId = id,
+                    PartnerManagerId = request.PartnerManagerId,
+                    PromoCodeId = promoCode.Id,
+                    PromoCode = promoCode.Code,
+                    ServiceInfo = promoCode.ServiceInfo,
+                    PreferenceId = promoCode.PreferenceId,
+                    BeginDate = promoCode.BeginDate,
+                    EndDate = promoCode.EndDate
+                };
+
+                await _rabbitMQService.PublishAsync(
+                    promocodeEvent,
+                    "promocode.exchange",
+                    "promocode.issued");
+
+                return CreatedAtAction(nameof(GetPartnerPromoCodeAsync),
+                    new { id = promoCode.PartnerId, promoCodeId = promoCode.Id }, null);
+
             }
-
-            var activeLimit = partner.PartnerLimits.FirstOrDefault(x
-                => !x.CancelDate.HasValue && x.EndDate > DateTime.Now);
-
-            if (activeLimit == null)
+            catch (ArgumentException ex)
             {
-                return BadRequest("Нет доступного лимита на предоставление промокодов");
+                return BadRequest(ex.Message);
             }
-
-            if (partner.NumberIssuedPromoCodes + 1 > activeLimit.Limit)
+            catch (InvalidOperationException ex)
             {
-                return BadRequest("Лимит на выдачу промокодов превышен");
+                return BadRequest(ex.Message);
             }
-
-            if (partner.PromoCodes.Any(x => x.Code == request.PromoCode))
-            {
-                return BadRequest("Данный промокод уже был выдан ранее");
-            }
-
-            //Получаем предпочтение по имени
-            var preference = await _preferencesRepository.GetByIdAsync(request.PreferenceId);
-
-            if (preference == null)
-            {
-                return BadRequest("Предпочтение не найдено");
-            }
-
-            PromoCode promoCode = PromoCodeMapper.MapFromModel(request, preference, partner);
-            partner.PromoCodes.Add(promoCode);
-            partner.NumberIssuedPromoCodes++;
-
-            await _partnersRepository.UpdateAsync(partner);
-
-            //TODO: Чтобы информация о том, что промокод был выдан парнером была отправлена
-            //в микросервис рассылки клиентам нужно либо вызвать его API, либо отправить событие в очередь
-            await _givingPromoCodeToCustomerGateway.GivePromoCodeToCustomer(promoCode);
-
-            //TODO: Чтобы информация о том, что промокод был выдан парнером была отправлена
-            //в микросервис администрирования нужно либо вызвать его API, либо отправить событие в очередь
-
-            if (request.PartnerManagerId.HasValue)
-            {
-                await _administrationGateway.NotifyAdminAboutPartnerManagerPromoCode(request.PartnerManagerId.Value);
-            }
-
-            return CreatedAtAction(nameof(GetPartnerPromoCodeAsync),
-                new { id = partner.Id, promoCodeId = promoCode.Id }, null);
         }
     }
 }

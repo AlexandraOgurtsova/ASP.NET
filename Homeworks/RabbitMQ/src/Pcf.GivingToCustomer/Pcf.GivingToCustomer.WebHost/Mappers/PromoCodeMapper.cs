@@ -19,8 +19,15 @@ namespace Pcf.GivingToCustomer.WebHost.Mappers
             promocode.Code = request.PromoCode;
             promocode.ServiceInfo = request.ServiceInfo;
 
-            promocode.BeginDate = DateTime.Parse(request.BeginDate);
-            promocode.EndDate = DateTime.Parse(request.EndDate);
+            DateTime beginDate;
+            DateTime endDate;
+
+            if (string.IsNullOrEmpty(request.BeginDate) || !DateTime.TryParse(request.BeginDate, out beginDate))
+                promocode.BeginDate = DateTime.Now;
+
+            if (string.IsNullOrEmpty(request.EndDate) || !DateTime.TryParse(request.EndDate, out endDate))
+                promocode.EndDate = DateTime.Now.AddDays(30);
+
 
             promocode.Preference = preference;
             promocode.PreferenceId = preference.Id;
